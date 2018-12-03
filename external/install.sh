@@ -17,7 +17,7 @@ if [ ! -e wx ] && [ "$1" == "wxWidgets" -o "$1" == "wx" ]; then
     if [ ! -e "${WXBUILD}-${VERSION}" ]; then
         if [ ! -e "${WXBUILD}-${VERSION}.tar" ]; then
 	    if [ ! -e "${WXBUILD}-${VERSION}.tar.bz2" ]; then
-                wget https://github.com/wxWidgets/wxWidgets/releases/download/v${VERSION}/${WXBUILD}-${VERSION}.tar.bz2 || exit 1
+                wget -c https://github.com/wxWidgets/wxWidgets/releases/download/v${VERSION}/${WXBUILD}-${VERSION}.tar.bz2 || exit 1
 	    fi
 	    bunzip2 ${WXBUILD}-${VERSION}.tar.bz2 || exit 1
 	fi
@@ -32,8 +32,8 @@ if [ ! -e wx ] && [ "$1" == "wxWidgets" -o "$1" == "wx" ]; then
 	    --disable-webkit --disable-webviewwebkit --enable-maxosx_arch=x86_64 CC=clang CXX=clang++
 	make || exit 1
     else
-	../configure --disable-shared --with-opengl --enable-monolithic
-        make || exit 1
+	../configure --disable-shared --with-opengl --enable-monolithic --disable-compat28
+        make -j || exit 1
     fi
     cd ../..
     ln -s "${WXBUILD}-${VERSION}" "${CODEBASE}/external/wx"
@@ -82,9 +82,11 @@ if [ ! -e opencv ] && [ "$1" == "OpenCV" -o "$1" == "opencv" ]; then
     else
 	cmake -D CMAKE_BUILD_TYPE=RELEASE \
 	      -D CMAKE_INSTALL_PREFIX=${CODEBASE}/external/opencv \
-	      -D BUILD_NEW_PYTHON_SUPPORT=OFF .
+	      -D BUILD_NEW_PYTHON_SUPPORT=OFF \
+	      -D BUILD_opencv_video=OFF \
+	      -D WITH_LIBV4L=OFF .
     fi
-    make
+    make -j
     make install
     cd ..
 fi
@@ -92,13 +94,13 @@ fi
 # zlib
 if [ ! -e zlib ] && [ "$1" == "zlib" ]; then
     VERSION="1.2.8"
-    wget -c http://zlib.net/zlib-${VERSION}.tar.gz || exit 1
+    wget -c https://github.com/madler/zlib/archive/v${VERSION}.tar.gz -O zlib-${VERSION}.tar.gz || exit 1
     tar zxvf zlib-${VERSION}.tar.gz
     ln -s zlib-${VERSION} ${CODEBASE}/external/zlib
     cd zlib
     setenv CC gcc
     ./configure -t --shared
-    make
+    make -j
     cd ..
 fi
 
@@ -111,7 +113,7 @@ if [ ! -e lua ] && [ "$1" == "lua" ]; then
     if [ "$OS" == "Darwin" ]; then
         make macosx
     else
-        make linux
+        make -j linux
     fi
     make install INSTALL_TOP=${CODEBASE}/external/lua
 fi
